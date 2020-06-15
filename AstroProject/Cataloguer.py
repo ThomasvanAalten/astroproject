@@ -8,6 +8,11 @@ import Utilities
 from astropy.table import Table
 import matplotlib.pyplot as plt
 import FluxFinder
+from astropy.table import Table
+from astroquery.astrometry_net import AstrometryNet
+
+#remove stars within 10 pixels on edge
+#add xy dimensions of image as global variable
 
 class Cataloguer:
     
@@ -74,8 +79,10 @@ class Cataloguer:
         #build a catalogue of all stars in the image
         sources = self.find_stars(image_data, std)
         
+        self.remove_stars(sources, image_data)
+        
         #add the RA and DEC for each star to the catalogue
-        self.convert_to_ra_and_dec(sources, imagedir + file)
+        self.convert_to_ra_and_dec(sources, len(image_data[0]), len(image_data))
 
         #build catalogue file path
         filepath = self.filesdir + Constants.working_directory + Constants.catalogue_prefix + self.image_names + Constants.standard_file_extension
@@ -84,7 +91,9 @@ class Cataloguer:
         sources.write(filepath, format = Constants.table_format, overwrite=True)
         
         self.n_sources = len(sources['id'])
-        #self.make_reg_file(sources)
+        self.make_reg_file(sources)
+        
+        print("Catalogued " + str(self.n_sources) + " objects")
             
         #build path of file to store the time at which each image was taken
         times = self.filesdir + "workspace/" + Constants.time_file
@@ -122,12 +131,29 @@ class Cataloguer:
             sources[col].info.format = '%.8g'  # for consistent table output
            
         return sources
-   
+    
+    def remove_stars(self, sources, image_data):
+        
+        to_remove = []
+                
+        for i in range(len(sources)):
+            
+            if sources['flux'][i] > Constants.flux_cutoff or not Utilities.is_within_boundaries(sources['xcentroid'][i], sources['ycentroid'][i], len(image_data[0]), len(image_data), Constants.edge_limit):
+                to_remove.append(i)
+        
+        for i in range(len(to_remove)):
+            sources.remove_row(to_remove[i] - i)
+
+            
+        print("Dumped " + str(len(to_remove)) + " objects")
+        
+    #investigate what this is doing 
+    
     #convert all of the source x and y positions to RA and DEC
-    def convert_to_ra_and_dec(self, sources, image_file):
+    def convert_to_ra_and_dec(self, sources, image_width, image_height):
         
         # find the wcs assosiated with the fits image using astropy and the header
-        wcs = WCS(fits.open(image_file)[0].header)
+        wcs = self.get_wcs_header(sources, image_width, image_height)
 
         # make two new coloums of 0's
         sources['RA'] = sources['xcentroid'] * 0
@@ -189,8 +215,6 @@ class Cataloguer:
                     
                     mean = Utilities.mean(t['counts'])
                     
-
-                    
                     std = Utilities.standard_deviation(t['counts'])
                     
                     value = std/mean
@@ -208,7 +232,10 @@ class Cataloguer:
                     #if Utilities.is_above_line(std, mean, 17, 0, 0.05) and mean > 50:
                     #if value < 0.01 and mean > 3:
                         #print(file.split("id")[1].split(".")[0],Utilities.mean(t['counts']))
+        
+        #compile results into single array
         a = [self.means, self.stds, self.id_map]
+        #sort results by decreasing variability 
         Utilities.quicksort(a, True)
 
     def plot_means_and_stds(self):
@@ -223,12 +250,21 @@ class Cataloguer:
         plt.gca().set_ylim(bottom=0)
         plt.show()
     
+    #finds which stars are variable by comparing their standard deviations
+    #and means to those of the surrounding stars in the mean-std plot
+    #I think a better method should be implemented
     def is_variable(self, index):
         
+        #number of stars in either direction to compare to
         check_radius = 10
+        
+        #threshold for being defined as variable
         variability = 2
+
         total = 0
         
+        #ensures only checks for surrounding stars where they exist
+        #(no indexing errors)
         llim = index - check_radius
         
         if llim < 0:
@@ -239,13 +275,15 @@ class Cataloguer:
         if ulim > len(self.means):
             ulim = len(self.means)
         
+        #find average std for surrounding stars in plot
         for i in range(llim, ulim):
             if i != index:
                 total += self.stds[i]
         
-        
         avg = total / (ulim-llim)
         
+        #if this star's std is much higher than the surrounding average
+        #it is a variable star
         if self.stds[index] > avg * (1 + variability):
             
             self.var_means.append(self.means[index])
@@ -256,8 +294,9 @@ class Cataloguer:
         
         
             
-                
+    #print plots of all variable stars in dataset             
     def get_variables(self):
+        
         t = 0
         
         ff = FluxFinder.FluxFinder("/Users/Thomas/Documents/Thomas_test/", "l198", True, 7, 50)
@@ -267,30 +306,46 @@ class Cataloguer:
                 t+= 1
                 #print(self.id_map[i])
                 ff.plot_light_curve(self.id_map[i], None, True)
-        print(t)
         
-            
-            
-        
+    #find ids of stars with high brightness to produce average light curve.
+    #the average light curve is subtracted from each printed light curve to 
+    #reduce bias
     def get_ids_for_avg(self):
         
         ids = []
         
         for i in range(len(self.means)):
             #if self.means[i] > 50 and self.stds[i] < 0.04:
-            if not Utilities.is_above_line(-0.0001, 0.03, self.means[i], self.stds[i], 0.01) and self.means[i] > 5:
+            #if not Utilities.is_above_line(-0.0001, 0.03, self.means[i], self.stds[i], 0.01) and self.means[i] > 5:
+            if not Utilities.is_above_line(self.means[i], self.stds[i], 2.2222*10**-9, 0.05777778, 0.001) and self.means[i] > 10^6:
+   
                 light_curve_path = self.filesdir + Constants.working_directory + Constants.light_curve_directory + self.image_names + Constants.identifier + str(self.id_map[i]) + Constants.standard_file_extension
 
                 t = Table.read(light_curve_path, format = Constants.table_format)
                 
                 if len(t['time']) == self.set_size * self.n_sets:
                     ids.append(self.id_map[i])
-                
+
         return ids
         
         
-                
-                    
+    def get_wcs_header(self, sources, image_width, image_height):
+        
+        ast = AstrometryNet()
+        ast.api_key = Constants.api_key
+
+        # Sort sources in ascending order
+        sources.sort('flux')
+        # Reverse to get descending order
+        sources.reverse()
+
+        print("starting job")
+        wcs = ast.solve_from_source_list(sources['xcentroid'], sources['ycentroid'],
+                                                image_width, image_height,
+                                                solve_timeout=120)
+        print('finished job')
+        
+        return wcs
             
             
         

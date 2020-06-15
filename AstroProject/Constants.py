@@ -16,3 +16,18 @@ id_map_file = "id_mapping" + standard_file_extension
 adjusted_curves_directory = "adjusted_light_curves/"
 output_directory = "results/"
 variability_threshold = 0.8
+folder = "/Users/thova/Documents/OneDrive_1_08-06-2020 copy/"
+file_name = "l141_5"
+has_sets = True
+set_size = 50
+n_sets = 7
+check_radius = 10
+cosmic_threshold = 5
+flux_cutoff = 100
+edge_limit = 50
+inner_radius = 8
+outer_radius = 13
+api_key = "kldhxakssorkybug"
+job_file_name = "astrometryjob.txt"
+
+

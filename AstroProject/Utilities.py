@@ -1,3 +1,4 @@
+from datetime import datetime
 
 #format a number i into a string of length 3
 #example: 1 becomes 001, 54 becomes 054 etc
@@ -29,6 +30,7 @@ def equals(a, b, fraction):
 
 #standard deviation of items in a list
 def standard_deviation(a):
+   
     i = 0
     mean_val = mean(a)
     
@@ -62,6 +64,7 @@ def is_within_boundaries(x, y, im_x_dim, im_y_dim, edge_distance_limit):
 #check that a data point lies above the specified line by a certain fraction
 def is_above_line(x, y, m, c, fraction):
     exp = m * x + c
+
     if y > (1 + fraction) * exp:
         return True
     return False
@@ -91,6 +94,13 @@ def _quicksort(a, start, end, ascending):
     
 def quicksort(a, ascending):
     _quicksort(a, 0, len(a[0])-1, ascending)
+    
+def print_job(job):
+    
+    now = datetime.now()
+
+    current_time = now.strftime("%H:%M:%S")
+    print("Finished " + job + " at " + current_time)
         
         
 

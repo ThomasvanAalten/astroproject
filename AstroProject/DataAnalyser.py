@@ -4,6 +4,8 @@ import os
 import Utilities
 import matplotlib.pyplot as plt
 import FluxFinder
+import numpy as np
+
 
 class DataAnalyser:
     
@@ -21,6 +23,7 @@ class DataAnalyser:
     times = []
     light_curve_dir = None
     results_table = None
+    variable_ids = []
     
     
     def __init__(self, filesdir, image_names, has_sets, set_size, n_sets):
@@ -38,8 +41,9 @@ class DataAnalyser:
         #build path of the directory in which the light curves are stored
         self.means = []
         self.stds = []
+        self.id_map = []
         
-        cat = Table.read(self.filesdir + Constants.working_directory + Constants.catalogue_prefix + self.image_names + Constants.standard_file_extension, format=Constants.table_format)
+        #cat = Table.read(self.filesdir + Constants.working_directory + Constants.catalogue_prefix + self.image_names + Constants.standard_file_extension, format=Constants.table_format)
         
         
         if not adjusted:
@@ -51,9 +55,17 @@ class DataAnalyser:
         for file in os.listdir(light_curve_dir):
             
             if file[:len(self.image_names)] == self.image_names:
+                
                 #print(file)
                 #read light curve data from file
                 t = Table.read(light_curve_dir + file, format = Constants.table_format)
+                
+                id = file.split("id")[1].split(".")[0]
+
+                if adjusted:
+                    if self.remove_cosmics(t):
+                        print(id)
+                    
                                 
                 #only plot data point if at least 5 non-zero counts are recorded
                 if len(t['counts']) > self.set_size*self.n_sets / 3:
@@ -66,12 +78,11 @@ class DataAnalyser:
                     std = Utilities.standard_deviation(t['counts'])
                     
                     value = std/mean
+                                        
                     
-                    id = file.split("id")[1].split(".")[0]
-
-                    
-                    
-                    if value > 0 and value < 2 and mean > 0.02 and mean < 80:
+                                                       
+                    if value > 0 and value < 2: #and mean > 0.02 and mean < 80:
+                        
                         self.stds.append(value)
                         self.means.append(mean)
                 
@@ -82,92 +93,170 @@ class DataAnalyser:
                         #print(file.split("id")[1].split(".")[0],Utilities.mean(t['counts']))
         Utilities.quicksort([self.means, self.stds, self.id_map], True)
 
-    def plot_means_and_stds(self):
-        plt.figure(figsize=(16, 10))
+        if adjusted:
+            print("Floor at " + str(min(self.stds)))
+        
+    def plot_means_and_stds(self, adjusted):
+       
+        _ = plt.figure(figsize=(16, 10))
 
-        plt.scatter(self.means, self.stds, marker = '.')
-        plt.scatter(self.var_means, self.var_stds, marker = '.', color = 'red')
-        plt.xscale('log')
-        plt.xlabel("mean")
-        plt.ylabel("standard deviation")
-        plt.xlim(80, 0)
+        _ = plt.scatter(self.means, self.stds, marker = '.');
+        _ = plt.scatter(self.var_means, self.var_stds, marker = '.', color = 'red');
+        _ = plt.xscale('log')
+        _ = plt.xlabel("mean counts")
+        _ = plt.ylabel("standard deviation")
+        _ = plt.xlim(self.means[len(self.means)-1] * 1.3, self.means[0] * 0.7)
         
         #ensure plot y axis starts from 0
-        plt.gca().set_ylim(bottom=0)
-        plt.show()
+        _ = plt.gca().set_ylim(bottom=0)
+        
+        suf = ""
+        if adjusted:
+            suf = "_adjusted"
+        _ = plt.savefig(Constants.folder + Constants.working_directory + Constants.output_directory + "SDvMean" + suf)
     
-    
+    #returns a score determining the variability of the star
     def get_variable_score(self, index):
         
-        check_radius = 10
-        variability = Constants.variability_threshold
-        total = 0
+        #the next part is just the same as the is_variable method
+        #in Cataloguer - need to investigate if there is a reason for this
+       
+        values = []
         
-        llim = index - check_radius
+        
+        llim = index - Constants.check_radius
         
         if llim < 0:
             llim = 0
         
-        ulim = index + check_radius + 1
+        ulim = index + Constants.check_radius + 1
         
         if ulim > len(self.means):
             ulim = len(self.means)
         
         for i in range(llim, ulim):
             if i != index:
-                total += self.stds[i]
+                values.append(self.stds[i])
         
+        #use median instead of mean
         
-        avg = total / (ulim-llim)
+        median = np.median(values)
         
-        if self.stds[index] > avg * (1 + Constants.variability_threshold):
+        if self.stds[index] > median * (1 + Constants.variability_threshold):
             
             self.var_means.append(self.means[index])
             self.var_stds.append(self.stds[index])
             
-        return (self.stds[index] - avg)/ avg
+        return (self.stds[index] - median)/ median
         
         
-            
-                
-    def get_variables(self):
+    #seems to serve same function as same fn in cataloguer?
+    #looks like this one is the one that is actually used
+    #print plots of all variable stars in dataset, and stores their 
+    #ids, x-y coords and variabilities in a table
+    #comments in other
+    def get_variables(self, adjusted):
+        
         t = 0
+        
+        self.var_means = []
+        self.var_stds = []
         
         cat = Table.read(self.filesdir + Constants.working_directory + Constants.catalogue_prefix + self.image_names + Constants.standard_file_extension, format=Constants.table_format)
 
         self.results_table = Table(names = ('id', 'xcentroid', 'ycentroid', 'variability'))
         
-        ff = FluxFinder.FluxFinder("/Users/Thomas/Documents/Thomas_test/", "l198", True, 7, 50)
+        ff = FluxFinder.FluxFinder(Constants.folder, Constants.file_name, True, 7, 50)
 
         for i in range(len(self.means)):
+            
             variability = self.get_variable_score(i)
+            
             if variability > Constants.variability_threshold:
+                
                 t+= 1
                 id = self.id_map[i]
+                self.variable_ids.append(id)
                 self.results_table.add_row([int(id), cat['xcentroid'][id-1], cat['ycentroid'][id-1], variability])
                 
-                ff.plot_light_curve(self.id_map[i], None, True)
-        print(t)
+                #remove False literal here
+                if adjusted:
+                    ff.plot_light_curve(self.id_map[i], None, True)
         
             
+    
+    def create_thumbnails(self, ff):
+        
+        light_curve_dir = self.filesdir + Constants.working_directory + Constants.adjusted_curves_directory
+        
+        for i in range(len(self.results_table['id'])):
+
+            file = light_curve_dir + Constants.file_name + "id" + str(int(self.results_table['id'][i])) + ".txt"
+            t = Table.read(file, format = Constants.table_format)
+            
+            i_dim = 0
+            i_bright = 0
+            c = t['counts']
+            
+            for j in range(len(c)):
+                if c[j] > c[i_bright]:
+                    i_bright = j
+                if c[j] < c[i_dim]:
+                    i_dim = j
+            
+            i_x = self.results_table['xcentroid'][i]
+            i_y = self.results_table['ycentroid'][i]
+            
+            print(i_x, i_y)
+            
+            print(self.results_table['id'][i])
+            
+            dim = ff.get_thumbnail(i_dim+1, i_x, i_y)
+            bright = ff.get_thumbnail(i_bright+1, i_x, i_y)
+            first = ff.get_thumbnail(1, i_x, i_y)
+
+            
+            output_dir = self.filesdir + Constants.working_directory  + Constants.output_directory
+            
+            dim_path = output_dir + "id_" + str(int(self.results_table['id'][i])) + "_dim" + Constants.fits_extension
+            bright_path = output_dir + "id_" + str(int(self.results_table['id'][i])) + "_bright" + Constants.fits_extension
+            first_path = output_dir + "id_" + str(int(self.results_table['id'][i])) + "_first" + Constants.fits_extension
+
+            dim.writeto(dim_path, overwrite=True)
+            bright.writeto(bright_path, overwrite=True)
+            first.writeto(first_path, overwrite=True)
+
+
+            
+            
+            
+
             
         
+        
+    #same function in cataloguer - remove one
+    #probably from cataloguer
+    #comments in other
     def get_ids_for_avg(self):
         
         ids = []
-        
-        for i in range(len(self.means)):
+    
+    
+        for i in range(len(self.means)-1, int((len(self.means)-1) * 0.9), -1):
             #if self.means[i] > 50 and self.stds[i] < 0.04:
-            if not Utilities.is_above_line(-0.0001, 0.03, self.means[i], self.stds[i], 0.01) and self.means[i] > 5:
+            #if not Utilities.is_above_line(-0.0001, 0.03, self.means[i], self.stds[i], 0.01) and self.means[i] > 5:
+            #if not Utilities.is_above_line(self.means[i], self.stds[i], 2.2222*10**-9, 0.05777778, 0.001) and self.means[i] > 10^6:
+            if not self.id_map[i] in self.variable_ids:
                 light_curve_path = self.filesdir + Constants.working_directory + Constants.light_curve_directory + self.image_names + Constants.identifier + str(self.id_map[i]) + Constants.standard_file_extension
 
                 t = Table.read(light_curve_path, format = Constants.table_format)
                 
                 if len(t['time']) == self.set_size * self.n_sets:
                     ids.append(self.id_map[i])
-                
         return ids
     
+    #duplicate method in ff - remove this?
+    #comments in other
     def make_avg_curve(self, ids):
                 
         for i in range(len(ids)):
@@ -196,6 +285,8 @@ class DataAnalyser:
         file = self.directory + Constants.working_directory + self.image_names + "_avg" + Constants.standard_file_extension
         light_curve.write(file, format = Constants.table_format, overwrite=True)
 
+    #duplicate method in ff - remove this?
+    #comments in other
     def divide_by_average(self):
         
         adjusted_light_curve_dir = self.filesdir + Constants.working_directory  + Constants.adjusted_curves_directory
@@ -211,7 +302,6 @@ class DataAnalyser:
                 this_times = t['time']
                 
                 id = file.split("id")[1].split(".")[0]
-                print(id)
                 
                 for i in range(len(this_fluxes)):
                     time = this_times[i]
@@ -228,7 +318,7 @@ class DataAnalyser:
                 light_curve.write(out_file, format = Constants.table_format, overwrite=True)
 
         
-        
+    #save table of variable stars (in order of decreasing variability)
     def output_results(self):
         
         output_dir = self.filesdir + Constants.working_directory  + Constants.output_directory
@@ -239,6 +329,52 @@ class DataAnalyser:
        
         Utilities.quicksort(a, False)
         self.results_table.write(output_dir + self.image_names + "_results" + Constants.standard_file_extension, format = Constants.table_format, overwrite = True)
-    
-    #def save_light_curve(self, id)
+        
+       
+    def remove_cosmics(self, t):
+        
+        counts = t['counts']
+        cosmic_index = -1
+        
+        if len(counts) == 0:
+            return
+        
+        std = Utilities.standard_deviation(counts)
+
+        
+        for i in range(len(counts)):
             
+            m = counts[i]
+            
+            if i == 0:
+                l = counts[i+1]
+            else:
+                l = counts[i-1]
+                
+            if i == len(counts) - 1:
+                r = counts[i-1]
+            else:
+                r = counts[i+1]
+        
+            if m - r > Constants.cosmic_threshold * std and m - l > Constants.cosmic_threshold * std:
+                
+                if cosmic_index != -1:
+                    return False
+              
+                cosmic_index = i
+            
+        if cosmic_index == -1:
+            return False
+            
+        print("cosmic detected at " + str(35*cosmic_index) + "s in id:")
+        
+        if i == 0:
+                replacement = counts[1]
+        else:
+            replacement = counts[i-1]
+                
+        t['counts'][cosmic_index] = replacement
+            
+        return True
+          
+    

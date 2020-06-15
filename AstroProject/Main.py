@@ -1,40 +1,65 @@
-import AstroProject.Reducer
-import AstroProject.Cataloguer
-import AstroProject.ShiftFinder
-import AstroProject.FluxFinder
-import AstroProject.DataAnalyser
-#r = AstroProject.Reducer.Reducer("/Users/Thomas/Documents/Thomas_test/","No filter","l198", "bias_001.fit", "flat-1_001.fit")
+import Reducer
+import Cataloguer
+import ShiftFinder
+import FluxFinder
+import DataAnalyser
+import Constants
+import Utilities
+
+from datetime import datetime
+
+now = datetime.now()
+
+current_time = now.strftime("%H:%M:%S")
+print("Started at " + current_time)
+
+
+#r = Reducer.Reducer(Constants.folder,"No filter",Constants.file_name, 5, 5)
 #r.reduce(True)
-#set_size, n_sets = r.get_set_size()
+#set_size, n_sets = r.get_set_info()
 
-has_sets = True
-set_size = 50
-n_sets = 7
+#Utilities.print_job("reducing images")
 
-#c = AstroProject.Cataloguer.Cataloguer("/Users/Thomas/Documents/Thomas_test/", "l198", has_sets, set_size, n_sets)
-#c.catalogue()
+c = Cataloguer.Cataloguer(Constants.folder, Constants.file_name, Constants.has_sets, Constants.set_size, Constants.n_sets)
+c.catalogue()
 
-#sf = AstroProject.ShiftFinder.ShiftFinder("/Users/Thomas/Documents/Thomas_test/", "l198", has_sets, set_size, n_sets)
+#Utilities.print_job("cataloguing stars")
+
+#sf = ShiftFinder.ShiftFinder(Constants.folder, Constants.file_name, Constants.has_sets, Constants.set_size, Constants.n_sets)
 #sf.get_all_shifts()
 #sf.find_shift_between_all_catalogues(1400)
 
-#
-#ff = AstroProject.FluxFinder.FluxFinder("/Users/Thomas/Documents/Thomas_test/", "l198", True, 7, 50)
+#Utilities.print_job("finding shifts")
+
+ff = FluxFinder.FluxFinder(Constants.folder, Constants.file_name, True, 7, 50)
 #ff.find_all_fluxes()
 #ff.make_light_curves()
 
-da = AstroProject.DataAnalyser.DataAnalyser("/Users/Thomas/Documents/Thomas_test/", "l198", True, 7, 50)
+#Utilities.print_job("making light curves")
 
-da.get_means_and_stds(True)
-da.get_variables()
-da.plot_means_and_stds()
-da.output_results()
-#ids = c.get_ids_for_avg()
+da = DataAnalyser.DataAnalyser(Constants.folder, Constants.file_name, True, 7, 50)
+
+#da.get_means_and_stds(False)
+#da.get_variables(False)
+#da.output_results() #this should not be here - make it just create results folder with separate method
+#da.plot_means_and_stds(False)
+
+#ids = da.get_ids_for_avg()
+
 #ff.make_avg_curve(ids)
 #ff.divide_by_average()
-#ff.plot_light_curve(None, "/Users/Thomas/Documents/Thomas_test/workspace/l198_avg.txt")
-    
+#ff.plot_light_curve(None, Constants.folder + Constants.working_directory + Constants.file_name + "_avg.txt", True)
 
+Utilities.print_job("adjusting light curves")
+
+#da.get_means_and_stds(True)
+#da.get_variables(True)
+#da.plot_means_and_stds(True)
+#da.output_results()
+
+#da.create_thumbnails(ff)
+
+Utilities.print_job("everything")
 
 
 

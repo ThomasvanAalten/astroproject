@@ -6,6 +6,7 @@ from astropy.io.fits import PrimaryHDU
 from astropy.io.fits import getval
 import Utilities
 import numpy as np
+import PositionFinder
 
 import os
 import Constants
@@ -22,10 +23,16 @@ class Reducer:
     fil = None
         
     #bias file
-    bias = None
+    bias_frames = []
     
     #flatfield file
-    flatfield = None
+    flatfield_frames = []
+    
+    master_bias = None
+    
+    master_flat = None
+    
+    flat_median = None
     
     #the number of images in a single set
     set_size = 0
@@ -35,24 +42,50 @@ class Reducer:
     
     
     #constructor for Reducer class object
-    def __init__(self, dir, filter, image_names, bias_file, flat_file):
+    def __init__(self, dir, filter, image_names, n_bias, n_flatfield):
         self.directory = dir
         self.image_names = image_names
-        self.filter = filter
-        self.get_bias_and_flatfield(bias_file, flat_file)
+        self.fil = filter
+        self.get_bias_and_flatfield()
         
         
     #get the bias and flatfield data files 
-    def get_bias_and_flatfield(self, bias_file, flat_file):
+    def get_bias_and_flatfield(self):
         
-        self.bias=getdata(self.directory + bias_file)
+        for file in os.listdir(self.directory):
+            
+            if 'bias' in file or 'Bias' in file:
+            
+                self.bias_frames.append(getdata(self.directory + file))
 
-        self.flat=getdata(self.directory +flat_file)
-
+            if 'flat' in file or 'Flat' in file:
+                
+                self.flatfield_frames.append(getdata(self.directory + file))
+      
+        print("Found " + str(len(self.bias_frames)) + " bias frames")
+        print("Found " + str(len(self.flatfield_frames)) + " flatfield frames")
         
+    def create_master_bias(self):
+        
+        self.master_bias = np.median(self.bias_frames)
+        print("Created master bias")
+    
+    def create_master_flat(self):
+        
+        self.master_flat = np.median(self.flatfield_frames)
+        
+        #get median of flatfield
+        self.flat_median = np.median(self.master_flat)
+                
+        print("Created master flatfield")
+        
+            
     #subtract bias and divide by flatfield for all images in the directory 
     #with a name containing the image_names regex
     def reduce(self, has_sets):
+        
+        self.create_master_bias()
+        self.create_master_flat()
         
         #new directory within directory containing raw images to store
         #program output in
@@ -73,9 +106,7 @@ class Reducer:
         #length of image name regex
         strlen=len(self.image_names)
         
-        
         i = 0        
-        
         #loop througheach file in directory 
         for file in os.listdir(self.directory):
             #if the first strlen characters are the image name regex then
@@ -83,20 +114,20 @@ class Reducer:
             if file[:strlen]==self.image_names:
                 #get image filter value
                 filter=getval(self.directory+file,'FILTER',ignore_missing_end=True)
+                
                 #if the filter of the image matches the required filter then
                 if filter[:1]==self.fil or filter == self.fil:
+
+
                     
-                    #get median of flatfield
-                    median = np.median(self.flatfield)
-                   
                     #get image data and header
                     data= getdata(self.directory+file,ignore_missing_end=True) 
                     
                     #subtract bias from image
-                    data = data - self.bias
+                    data = data - self.master_bias
                     
                     #divide image by flatfield divided by median of flatfield
-                    data = data / (self.flatfield / median)
+                    data = data / (self.master_flat / self.flat_median)
                     
                     head=getheader(self.directory+file,ignore_missing_end=True)
                     hdu = PrimaryHDU(data, head)
@@ -104,7 +135,6 @@ class Reducer:
                     
                     #build filepath of processed image
                     filepath = newdir + Constants.reduced_prefix + self.image_names
-                    
                     #if raw images are stored in sets
                     if(has_sets):
                         
@@ -114,8 +144,8 @@ class Reducer:
                         #set number and image number
                         
                         array = file.split("_")
-                        set = int(array[1])
-                        i = int(array[2].split(".")[0])
+                        set = int(array[len(array)-2])
+                        i = int(array[len(array)-1].split(".")[0])
                         
                         #finds the maximum set size and image number 
                         #encountered, so the program in subsequent steps
@@ -127,9 +157,7 @@ class Reducer:
                         
                         if set > self.n_sets:
                             self.n_sets = set
-                        
-                        print(i)
-                        
+                                                
                         filepath += "_" + str(set) + "_" + Utilities.format_index(i)
                     
                     else:
@@ -148,9 +176,18 @@ class Reducer:
                         filepath += i
                     
                     filepath += Constants.fits_extension
-
+                    
+# =============================================================================
+#                     if set == 1 and i == 1:
+#                         
+#                         pf = PositionFinder.PositionFinder(newdir, hdul)
+#                         pf.getWCS()
+#                         return
+# =============================================================================
+                    
                     #export processed image to file 
                     hdul.writeto(filepath, overwrite=True)
+
                     
     #get set size and number of sets for use later in program
     def get_set_info(self):

@@ -42,6 +42,7 @@ class ShiftFinder:
         max = 0
         
         #finds index of brightest star
+        #DO THIS ON MULTIPLE STARS
         for i in range(len(fluxes)):
             if float(fluxes[i]) > fluxes[max]:
                 max = i
@@ -99,6 +100,8 @@ class ShiftFinder:
 
             for i in range(1, self.set_size+1):    
 
+                print("Finding shifts in image " + str((set-1)*self.set_size + i))
+
                 #build image file path
                 image = self.directory + Constants.working_directory + Constants.image_directory + Constants.reduced_prefix + self.image_names
                 
@@ -130,9 +133,7 @@ class ShiftFinder:
                 y += y_shift
                 
                 j+= 1
-                    
-                print(set, i, x_shift+prev_x_shift, y_shift+prev_y_shift)
-            
+                                
         #make table of x and y shifts for output
         table = Table([x_shifts, y_shifts], names = ('xshifts','yshifts'))
         
@@ -140,6 +141,7 @@ class ShiftFinder:
         table.write(shift_file, format = Constants.table_format, overwrite=True)
     
     
+    #I believe this is redundant
     def find_shift_between_all_catalogues(self, image_size):  
         
         previous_cat = Table.read(self.directory + Constants.working_directory + Constants.catalogue_prefix + self.image_names + "_1" + Constants.standard_file_extension, format = Constants.table_format)
@@ -161,7 +163,7 @@ class ShiftFinder:
         
         table.write(shift_file, format = Constants.table_format, overwrite=True)
             
-            
+    #I believe this is redundant 
     def find_shift_between_catalogues(self, catalogue1, catalogue2, image_size):
         
         x1s = catalogue1['xcentroid']
@@ -212,7 +214,6 @@ class ShiftFinder:
                         break
                     
             if matches > 0.3*len(distances):
-                print(matches, j)
 
                 return x2s[i] - x1s[max], y2s[i] - y1s[max]
                     
