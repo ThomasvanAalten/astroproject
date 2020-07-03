@@ -74,7 +74,7 @@ class FluxFinder:
         #iterate over each image
         for set in range(1, self.n_sets+1):
             for i in range(1, self.set_size+1):
-                print(i)
+                print(str(i))
                 self.find_fluxes(i, set)
                 
                
@@ -347,13 +347,14 @@ class FluxFinder:
             
             #check that largest aperture does not exceed the boundaries of the image
             if Utilities.is_within_boundaries(x, y, len(image_data[0]), len(image_data), 15):
-            
+
+
                 # Calc the mean background in the second aperture ring
-                bkg_mean = phot_table2['aperture_sum_1'][i] / annulus_apertures.area()
+                bkg_mean = phot_table2['aperture_sum_1'][i] / annulus_apertures.area
                 phot_table2['mean'][i] = bkg_mean
                 
                 # Calc background level in each main aperture and subtract
-                bkg_sum = bkg_mean * apertures.area()
+                bkg_sum = bkg_mean * apertures.area
                 final_sum = phot_table2['aperture_sum_0'][i] - bkg_sum
                 phot_table2['residual_aperture_sum_mean'][i] = final_sum
         
@@ -371,11 +372,11 @@ class FluxFinder:
             x = positions[0][q]
             y = positions[1][q]   
             xypos = (x, y)
-            
+
             #check that largest aperture does not exceed the boundaries of the image
             if Utilities.is_within_boundaries(x, y, len(image_data[0]), len(image_data), 15):
                 annulus = CircularAnnulus(xypos, r_in=Constants.inner_radius, r_out=Constants.outer_radius)
-                ann_mask = annulus.to_mask(method='center')[0]
+                ann_mask = annulus.to_mask(method='center')
                 weighted_data = ann_mask.multiply(image_data)
                 phot_table2['median'][q] = np.median(weighted_data[weighted_data != 0])
                 
@@ -383,7 +384,7 @@ class FluxFinder:
                 bkg_med = phot_table2['median'][q]
             
                 # Calc background level in each main aperture and subtract
-                bkg_sum = bkg_med * apertures.area()
+                bkg_sum = bkg_med * apertures.area
                 final_sum = phot_table2['aperture_sum_0'][q] - bkg_sum
             
             
@@ -469,13 +470,11 @@ class FluxFinder:
                     #if median has reasonable value
                     if t['median'][j] > 0: 
                         light_curves[j].add_row((time_elapsed, str(t['residual_aperture_sum_med'][j])))
-                        
 
         #loop through all light curves, writing them out to a file
         for j in range(len(light_curves)):
             #build light curve path
-            file = self.light_curve_dir + self.image_names + Constants.identifier + str(j+1) + Constants.standard_file_extension
-           
+            file = self.light_curve_dir + self.image_names + Constants.identifier + str(self.catalogue['id'][j]) + Constants.standard_file_extension
             table = light_curves[j]
             table.write(file, format = Constants.table_format, overwrite=True)
             
@@ -532,11 +531,19 @@ class FluxFinder:
         times = table['time']
         fluxes = table['counts']
         
+        mean = Utilities.mean(fluxes)
+        
+        for i in range(len(fluxes)):
+            fluxes[i] = fluxes[i]/mean
+        
+        minimum = min(fluxes)
+        maximum = max(fluxes)
+    
         _ = plt.figure(figsize = (12, 8))
-        _ = plt.plot(times, fluxes);
+        _ = plt.scatter(times, fluxes, s=5, marker = 'x');
         _ = plt.xlabel("time (s)")
-        _ = plt.ylabel("counts")
-        _ = plt.gca().set_ylim(bottom=0)
+        _ = plt.ylabel("counts/mean")
+        _ = plt.ylim(0.9 * minimum, maximum * 1.1)
         
         if id == None:
             id = 'avg'
@@ -621,7 +628,7 @@ class FluxFinder:
                 light_curve.write(out_file, format = Constants.table_format, overwrite=True)
 
         
-    def get_thumbnail(self, image_n, x, y):
+    def get_thumbnail(self, image_n, x, y, size):
         
         n = image_n % self.set_size
         
@@ -641,7 +648,6 @@ class FluxFinder:
         x = x + x_shift
         y = y + y_shift
         
-        size = 20
         
         ly = int(y-size)
         ry = int(y+size)
@@ -649,13 +655,22 @@ class FluxFinder:
         lx = int(x-size)
         rx = int(x+size)
         
-        print(ly, ry, lx, rx)
+        if lx < 0:
+            lx = 0
         
+        if rx > Constants.image_width:
+            rx = Constants.image_width-1
         
-        image_file[0].data = image[ly:ry, lx:rx] # note your x,y coords need to be an int
+        if ly < 0:
+            ly = 0
+        
+        if ry > Constants.image_height:
+            ry = Constants.image_height - 1
+            
+        return image[ly:ry, lx:rx] # note your x,y coords need to be an int
 
         
-        return image_file
+        
         
         
         

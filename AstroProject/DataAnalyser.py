@@ -5,9 +5,11 @@ import Utilities
 import matplotlib.pyplot as plt
 import FluxFinder
 import numpy as np
+from PIL import Image
 
 
 class DataAnalyser:
+    
     
     image_names = None
     filesdir = None
@@ -164,7 +166,7 @@ class DataAnalyser:
         
         cat = Table.read(self.filesdir + Constants.working_directory + Constants.catalogue_prefix + self.image_names + Constants.standard_file_extension, format=Constants.table_format)
 
-        self.results_table = Table(names = ('id', 'xcentroid', 'ycentroid', 'variability'))
+        self.results_table = Table(names = ('id', 'xcentroid', 'ycentroid', 'variability', 'RA', 'DEC'))
         
         ff = FluxFinder.FluxFinder(Constants.folder, Constants.file_name, True, 7, 50)
 
@@ -177,7 +179,10 @@ class DataAnalyser:
                 t+= 1
                 id = self.id_map[i]
                 self.variable_ids.append(id)
-                self.results_table.add_row([int(id), cat['xcentroid'][id-1], cat['ycentroid'][id-1], variability])
+                
+                row_index = np.where(cat['id'].data==id)
+                
+                self.results_table.add_row([int(id), cat['xcentroid'][row_index], cat['ycentroid'][row_index], variability, cat['RA'][row_index], cat['DEC'][row_index]])
                 
                 #remove False literal here
                 if adjusted:
@@ -213,18 +218,39 @@ class DataAnalyser:
             
             dim = ff.get_thumbnail(i_dim+1, i_x, i_y)
             bright = ff.get_thumbnail(i_bright+1, i_x, i_y)
-            first = ff.get_thumbnail(1, i_x, i_y)
-
             
             output_dir = self.filesdir + Constants.working_directory  + Constants.output_directory
-            
-            dim_path = output_dir + "id_" + str(int(self.results_table['id'][i])) + "_dim" + Constants.fits_extension
-            bright_path = output_dir + "id_" + str(int(self.results_table['id'][i])) + "_bright" + Constants.fits_extension
-            first_path = output_dir + "id_" + str(int(self.results_table['id'][i])) + "_first" + Constants.fits_extension
 
-            dim.writeto(dim_path, overwrite=True)
-            bright.writeto(bright_path, overwrite=True)
-            first.writeto(first_path, overwrite=True)
+            #dim_img = Image.new("L", (len(dim[0]), len(dim)), "white")
+            #dim_img.putdata(dim)
+            #dim_img.save(output_dir + "id_" + str(int(self.results_table['id'][i])) + "_dim.jpg")
+            
+            #bright_img = Image.new("L", (len(dim[0]), len(dim)), "white")
+            #bright_img.putdata(bright)
+            #bright_img.save(output_dir + "id_" + str(int(self.results_table['id'][i])) + "_bright.jpg")
+
+            fig = plt.figure()
+            fig.add_subplot(1, 2, 1)
+            plt.axis('off')
+            plt.imshow(dim, origin='upper', cmap=plt.cm.inferno)
+
+            
+            fig.add_subplot(1, 2, 2)
+            plt.axis('off')
+
+            plt.imshow(bright, origin='upper', cmap=plt.cm.inferno)
+            
+            plt.savefig(output_dir + "id_" + str(int(self.results_table['id'][i])) + ".jpg")
+
+            
+            
+            #dim_path = output_dir + "id_" + str(int(self.results_table['id'][i])) + "_dim" + Constants.fits_extension
+            #bright_path = output_dir + "id_" + str(int(self.results_table['id'][i])) + "_bright" + Constants.fits_extension
+            #first_path = output_dir + "id_" + str(int(self.results_table['id'][i])) + "_first" + Constants.fits_extension
+
+            #dim.writeto(dim_path, overwrite=True)
+            #bright.writeto(bright_path, overwrite=True)
+            #first.writeto(first_path, overwrite=True)
 
 
             
@@ -325,11 +351,13 @@ class DataAnalyser:
         if not os.path.exists(output_dir):
             os.mkdir(output_dir)  
         
-        a = [self.results_table['variability'], self.results_table['id'], self.results_table['xcentroid'], self.results_table['ycentroid']]
-       
+        a = [self.results_table['variability'], self.results_table['id'], self.results_table['xcentroid'], self.results_table['ycentroid'], self.results_table['RA'], self.results_table['DEC']]
+        
+        
         Utilities.quicksort(a, False)
         self.results_table.write(output_dir + self.image_names + "_results" + Constants.standard_file_extension, format = Constants.table_format, overwrite = True)
-        
+        Utilities.make_reg_file(output_dir, self.image_names + "_variables", self.results_table)
+
        
     def remove_cosmics(self, t):
         
@@ -366,7 +394,7 @@ class DataAnalyser:
         if cosmic_index == -1:
             return False
             
-        print("cosmic detected at " + str(35*cosmic_index) + "s in id:")
+        print("cosmic detected at approx " + str(35*cosmic_index) + "s in id:")
         
         if i == 0:
                 replacement = counts[1]

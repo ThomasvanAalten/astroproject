@@ -13,6 +13,7 @@ import Constants
     
 class Reducer:
     
+    
     #path to folder which contains the raw images
     directory = None
     
@@ -84,6 +85,10 @@ class Reducer:
     #with a name containing the image_names regex
     def reduce(self, has_sets):
         
+        
+        
+        
+        
         self.create_master_bias()
         self.create_master_flat()
         
@@ -111,8 +116,9 @@ class Reducer:
         for file in os.listdir(self.directory):
             #if the first strlen characters are the image name regex then
             #this file is an image to be processed
-            if file[:strlen]==self.image_names:
+            if file[:strlen]==self.image_names and Constants.fits_extension in file:
                 #get image filter value
+                print(file)
                 filter=getval(self.directory+file,'FILTER',ignore_missing_end=True)
                 
                 #if the filter of the image matches the required filter then
@@ -123,6 +129,9 @@ class Reducer:
                     #get image data and header
                     data= getdata(self.directory+file,ignore_missing_end=True) 
                     
+                    Constants.image_width = len(data)
+                    Constants.image_height = len(data[0])
+                    
                     #subtract bias from image
                     data = data - self.master_bias
                     
@@ -130,8 +139,7 @@ class Reducer:
                     data = data / (self.master_flat / self.flat_median)
                     
                     head=getheader(self.directory+file,ignore_missing_end=True)
-                    hdu = PrimaryHDU(data, head)
-                    hdul = HDUList([hdu], None)
+                    
                     
                     #build filepath of processed image
                     filepath = newdir + Constants.reduced_prefix + self.image_names
@@ -185,7 +193,27 @@ class Reducer:
 #                         return
 # =============================================================================
                     
-                    #export processed image to file 
+                    if True:
+                        
+                        width = len(data)
+                        height = len(data[0])
+                        
+                        x = int((width*0.1) + ((set*50 + i)/400)*(0.7*width))
+                        y = int(height/2)
+                        
+                        print(x, y, set, i)
+                        for k in range(-3, 3, 1):
+                            for l in range(-3, 3, 1):
+                                
+                                n = (k**2 + l**2)**0.5
+                                if n == 0:
+                                    n = 1
+                                    
+                                data[x + k][y + l] = 4.2/n * 8000
+                        
+                        #export processed image to file 
+                    hdu = PrimaryHDU(data, head)
+                    hdul = HDUList([hdu], None)
                     hdul.writeto(filepath, overwrite=True)
 
                     

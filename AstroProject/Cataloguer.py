@@ -73,16 +73,19 @@ class Cataloguer:
         #read in first image data
         image_data = fits.getdata(imagedir + file, ext=0)
         
-        #get mean median and standard deviation of the image data
-        mean, median, std = sigma_clipped_stats(image_data, sigma=3.0, iters=5)    
         
         #build a catalogue of all stars in the image
-        sources = self.find_stars(image_data, std)
+        sources = find_stars(image_data, 3)
         
         self.remove_stars(sources, image_data)
         
+        self.n_sources = len(sources['id'])
+        Utilities.make_reg_file(self.filesdir, self.image_names, sources)
+        
+        print("Catalogued " + str(self.n_sources) + " objects")
+        
         #add the RA and DEC for each star to the catalogue
-        self.convert_to_ra_and_dec(sources, len(image_data[0]), len(image_data))
+        #self.convert_to_ra_and_dec(imagedir+file, sources)
 
         #build catalogue file path
         filepath = self.filesdir + Constants.working_directory + Constants.catalogue_prefix + self.image_names + Constants.standard_file_extension
@@ -90,10 +93,7 @@ class Cataloguer:
         #write the catalogue to the catalogue file
         sources.write(filepath, format = Constants.table_format, overwrite=True)
         
-        self.n_sources = len(sources['id'])
-        self.make_reg_file(sources)
         
-        print("Catalogued " + str(self.n_sources) + " objects")
             
         #build path of file to store the time at which each image was taken
         times = self.filesdir + "workspace/" + Constants.time_file
@@ -114,23 +114,6 @@ class Cataloguer:
                 
                 #store the time which the current image was taken
                 self.add_times(times, fits.getheader(file))
-                
-
-    #catalogue all sources that meet the thresholds in the image
-    def find_stars(self, image, std):
-        
-        #initiate finder object. Will find objects with a FWHM of 8 pixels
-        # and 3-sigma times the background
-        daofind = DAOStarFinder(fwhm=8, threshold=3*std) 
-        
-        #finds sources
-        sources = daofind(image)
-        
-
-        for col in sources.colnames:    
-            sources[col].info.format = '%.8g'  # for consistent table output
-           
-        return sources
     
     def remove_stars(self, sources, image_data):
         
@@ -150,11 +133,11 @@ class Cataloguer:
     #investigate what this is doing 
     
     #convert all of the source x and y positions to RA and DEC
-    def convert_to_ra_and_dec(self, sources, image_width, image_height):
+    def convert_to_ra_and_dec(self, file, sources):
         
         # find the wcs assosiated with the fits image using astropy and the header
-        wcs = self.get_wcs_header(sources, image_width, image_height)
-
+        wcs = self.get_wcs_header(file)
+        return 
         # make two new coloums of 0's
         sources['RA'] = sources['xcentroid'] * 0
         sources['DEC'] = sources['xcentroid'] * 0
@@ -174,17 +157,7 @@ class Cataloguer:
         #write date of observation to file 
         f.write(str(image_header['DATE-OBS']) + "\r\n")
         
-    #make .region file for comparing catalogue to actual image
-    def make_reg_file(self, table):
-        
-        f = open(self.filesdir + self.image_names + ".reg", "a+")
-        
-        xs = table['xcentroid']
-        ys = table['ycentroid']
-        
-        #write out xs and ys of sources in catalogue
-        for i in range(len(xs)):
-            f.write("point " + str(xs[i]) + " " + str(ys[i]) + " # point=circle 4 \r\n")
+
 
     #plot the means and standard deviations of all light curves generated
     def get_means_and_stds(self, adjusted):
@@ -329,28 +302,44 @@ class Cataloguer:
         return ids
         
         
-    def get_wcs_header(self, sources, image_width, image_height):
+    def get_wcs_header(self, file):
         
         ast = AstrometryNet()
+        ast.TIMEOUT = 1200
         ast.api_key = Constants.api_key
 
-        # Sort sources in ascending order
-        sources.sort('flux')
-        # Reverse to get descending order
-        sources.reverse()
 
         print("starting job")
-        wcs = ast.solve_from_source_list(sources['xcentroid'], sources['ycentroid'],
-                                                image_width, image_height,
-                                                solve_timeout=120)
+        
+        wcs = ast.solve_from_image(file, solve_timeout = 1200)
+
         print('finished job')
-        
-        return wcs
+        if not wcs:
+            print('failed')
             
+        return WCS(header=wcs)
+        #return WCS()   
             
         
-                
-                    
+            #catalogue all sources that meet the thresholds in the image
+def find_stars(image_data, threshold):
+    
+    #get mean median and standard deviation of the image data
+    mean, median, std = sigma_clipped_stats(image_data, sigma=3.0, maxiters=5)  
+    
+    #initiate finder object. Will find objects with a FWHM of 8 pixels
+    # and 3-sigma times the background
+    daofind = DAOStarFinder(fwhm=8, threshold=threshold*std) 
+    
+    #finds sources
+    sources = daofind(image_data)
+    
+
+        
+    for col in sources.colnames:    
+        sources[col].info.format = '%.8g'  # for consistent table output
+       
+    return sources
 
                     
                     

@@ -5,6 +5,7 @@ import FluxFinder
 import DataAnalyser
 import Constants
 import Utilities
+import MovingObjectFinder
 
 from datetime import datetime
 
@@ -20,8 +21,11 @@ print("Started at " + current_time)
 
 #Utilities.print_job("reducing images")
 
-c = Cataloguer.Cataloguer(Constants.folder, Constants.file_name, Constants.has_sets, Constants.set_size, Constants.n_sets)
-c.catalogue()
+#c = Cataloguer.Cataloguer(Constants.folder, Constants.file_name, Constants.has_sets, Constants.set_size, Constants.n_sets)
+#c.catalogue()
+
+mof = MovingObjectFinder.MovingObjectFinder(Constants.folder)
+mof.find_moving_objects()
 
 #Utilities.print_job("cataloguing stars")
 
@@ -35,15 +39,14 @@ ff = FluxFinder.FluxFinder(Constants.folder, Constants.file_name, True, 7, 50)
 #ff.find_all_fluxes()
 #ff.make_light_curves()
 
-#Utilities.print_job("making light curves")
+Utilities.print_job("making light curves")
 
-da = DataAnalyser.DataAnalyser(Constants.folder, Constants.file_name, True, 7, 50)
+#da = DataAnalyser.DataAnalyser(Constants.folder, Constants.file_name, True, 7, 50)
 
 #da.get_means_and_stds(False)
 #da.get_variables(False)
 #da.output_results() #this should not be here - make it just create results folder with separate method
 #da.plot_means_and_stds(False)
-
 #ids = da.get_ids_for_avg()
 
 #ff.make_avg_curve(ids)

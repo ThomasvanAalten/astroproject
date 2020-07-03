@@ -1,4 +1,5 @@
 from datetime import datetime
+import Constants
 
 #format a number i into a string of length 3
 #example: 1 becomes 001, 54 becomes 054 etc
@@ -102,5 +103,22 @@ def print_job(job):
     current_time = now.strftime("%H:%M:%S")
     print("Finished " + job + " at " + current_time)
         
-        
+#make .region file for comparing catalogue to actual image
+def make_reg_file(directory, name, table):
+    
+    f = open(directory + name + ".reg", "w")
+    
+    xs = table['xcentroid']
+    ys = table['ycentroid']
+    
+    #write out xs and ys of sources in catalogue
+    for i in range(len(xs)):
+        f.write("point " + str(xs[i]) + " " + str(ys[i]) + " # point=circle 4 \r\n")
+
+def n_to_set_and_n(n):
+    set = int((n-1)/Constants.set_size) + 1
+    i = n % Constants.set_size
+    if i == 0:
+        i = Constants.set_size
+    return set, i
 
