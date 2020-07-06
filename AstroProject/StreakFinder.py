@@ -306,25 +306,42 @@ class StreakFinder:
         #hdul = HDUList([hdu], None)
         #hdul.writeto(self.directory + Constants.working_directory + "testimage.fits", overwrite=True)
         
-        
+    
+    #find all of the streaks in image n 
     def find_streaks(self, n):
         
+        #stores x and y positions of the centres of any streaks found in the 
+        #image
         streaks = []
+        
+        #stores the pixels that make up each streak
         streak_pixels = []
         
-
-        streak_count = 0
+        #refer to image n as 'data' (for simplicity)
         data = self.second_image
         
         median = np.median(data)
         
+        #stores all pixels with counts greater than the median which have been scanned
         all_pixels = set()
+        
+        #stores all pixels which form streaks in the image
         all_streaks = set()
+        
+        #loop through each pixel in the image
         for i in range(len(data)):
+            
             for j in range(len(data[0])): 
                 
-                string = str(i) + " " + str(j)
+                #if the count in the pixel is greater than 1.04 times the median
+                #and it has not been scanned already
                 if data[i][j] > median*1.04 and not string in all_pixels:
+                    
+                    #form string storing x and y position of pixel, to be stored
+                    #in the various sets of pixels. Cannot simply use an array 
+                    #as these cannot be inserted into a set.
+                    string = str(i) + " " + str(j)
+
                     
                     completed = False
                     to_scan = []
