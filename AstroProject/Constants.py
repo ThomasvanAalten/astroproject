@@ -34,5 +34,7 @@ image_height = 1600
 moving_obj_check_image = 30
 moving_obj_folder = "moving_objects/"
 moving_obj_file = "moving_objects.txt"
+streak_folder = "streaks/"
+streak_file = "streaks.txt"
 
 

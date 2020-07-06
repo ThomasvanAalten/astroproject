@@ -8,7 +8,6 @@ import Utilities
 from astropy.table import Table
 import matplotlib.pyplot as plt
 import FluxFinder
-from astropy.table import Table
 from astroquery.astrometry_net import AstrometryNet
 
 #remove stars within 10 pixels on edge
@@ -35,7 +34,7 @@ class Cataloguer:
     n_sources = 0
     
     means = []
-
+    
     stds = []
     
     var_means = []
@@ -48,8 +47,10 @@ class Cataloguer:
     
     avgs = []
     
+    wcs = None
+    
     def __init__(self, dir, image_names, has_sets, set_size, n_sets):
-
+    
         self.filesdir = dir
         self.image_names = image_names
         self.has_sets = has_sets
@@ -62,7 +63,7 @@ class Cataloguer:
         
         #build filepath for first image in the entire dataset
         imagedir = self.filesdir + Constants.working_directory + Constants.image_directory 
-
+    
         #build file name with the appropriate format given whether the 
         #data is stored in sets
         if not self.has_sets:
@@ -85,8 +86,8 @@ class Cataloguer:
         print("Catalogued " + str(self.n_sources) + " objects")
         
         #add the RA and DEC for each star to the catalogue
-        #self.convert_to_ra_and_dec(imagedir+file, sources)
-
+        self.convert_to_ra_and_dec(imagedir+file, sources)
+    
         #build catalogue file path
         filepath = self.filesdir + Constants.working_directory + Constants.catalogue_prefix + self.image_names + Constants.standard_file_extension
         
@@ -101,7 +102,7 @@ class Cataloguer:
         #if file already exists, delete its contents
         if(os.path.exists(times)):
             open(times, "w").close()
-
+    
         #loop through all images within each set 
         for set in range(1, self.n_sets + 1):
             for i in range(1, self.set_size + 1):
@@ -126,7 +127,7 @@ class Cataloguer:
         
         for i in range(len(to_remove)):
             sources.remove_row(to_remove[i] - i)
-
+    
             
         print("Dumped " + str(len(to_remove)) + " objects")
         
@@ -136,15 +137,16 @@ class Cataloguer:
     def convert_to_ra_and_dec(self, file, sources):
         
         # find the wcs assosiated with the fits image using astropy and the header
-        wcs = self.get_wcs_header(file)
+        self.wcs = self.get_wcs_header(file)
+        
         return 
         # make two new coloums of 0's
         sources['RA'] = sources['xcentroid'] * 0
         sources['DEC'] = sources['xcentroid'] * 0
-
+    
         # replace the 0's with ra and dec
         for x in range(0,len(sources)):
-            ra, dec = wcs.all_pix2world(sources['xcentroid'][x], sources['ycentroid'][x], 0) 
+            ra, dec = self.wcs.all_pix2world(sources['xcentroid'][x], sources['ycentroid'][x], 0) 
             sources['RA'][x] = ra
             sources['DEC'][x] = dec
     
@@ -157,8 +159,8 @@ class Cataloguer:
         #write date of observation to file 
         f.write(str(image_header['DATE-OBS']) + "\r\n")
         
-
-
+    
+    
     #plot the means and standard deviations of all light curves generated
     def get_means_and_stds(self, adjusted):
         
@@ -173,7 +175,7 @@ class Cataloguer:
             light_curve_dir = self.filesdir + Constants.working_directory + Constants.light_curve_directory
         else:
             light_curve_dir = self.filesdir + Constants.working_directory + Constants.adjusted_curves_directory
-
+    
         #for each file in the light curve directory 
         for file in os.listdir(light_curve_dir):
             
@@ -193,7 +195,7 @@ class Cataloguer:
                     value = std/mean
                     
                     id = file.split("id")[1].split(".")[0]
-
+    
                     
                     
                     if value > 0 and value < 2 and mean > 0.02 and mean < 80:
@@ -210,7 +212,7 @@ class Cataloguer:
         a = [self.means, self.stds, self.id_map]
         #sort results by decreasing variability 
         Utilities.quicksort(a, True)
-
+    
     def plot_means_and_stds(self):
         
         plt.scatter(self.means, self.stds, marker = '.')
@@ -233,7 +235,7 @@ class Cataloguer:
         
         #threshold for being defined as variable
         variability = 2
-
+    
         total = 0
         
         #ensures only checks for surrounding stars where they exist
@@ -273,7 +275,7 @@ class Cataloguer:
         t = 0
         
         ff = FluxFinder.FluxFinder("/Users/Thomas/Documents/Thomas_test/", "l198", True, 7, 50)
-
+    
         for i in range(len(self.means)):
             if self.is_variable(i):
                 t+= 1
@@ -291,14 +293,14 @@ class Cataloguer:
             #if self.means[i] > 50 and self.stds[i] < 0.04:
             #if not Utilities.is_above_line(-0.0001, 0.03, self.means[i], self.stds[i], 0.01) and self.means[i] > 5:
             if not Utilities.is_above_line(self.means[i], self.stds[i], 2.2222*10**-9, 0.05777778, 0.001) and self.means[i] > 10^6:
-   
+       
                 light_curve_path = self.filesdir + Constants.working_directory + Constants.light_curve_directory + self.image_names + Constants.identifier + str(self.id_map[i]) + Constants.standard_file_extension
-
+    
                 t = Table.read(light_curve_path, format = Constants.table_format)
                 
                 if len(t['time']) == self.set_size * self.n_sets:
                     ids.append(self.id_map[i])
-
+    
         return ids
         
         
@@ -307,12 +309,12 @@ class Cataloguer:
         ast = AstrometryNet()
         ast.TIMEOUT = 1200
         ast.api_key = Constants.api_key
-
-
+    
+    
         print("starting job")
         
         wcs = ast.solve_from_image(file, solve_timeout = 1200)
-
+    
         print('finished job')
         if not wcs:
             print('failed')

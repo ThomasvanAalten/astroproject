@@ -1,5 +1,7 @@
 from datetime import datetime
 import Constants
+from astropy.io import fits
+
 
 #format a number i into a string of length 3
 #example: 1 becomes 001, 54 becomes 054 etc
@@ -121,4 +123,14 @@ def n_to_set_and_n(n):
     if i == 0:
         i = Constants.set_size
     return set, i
+
+def get_image_data(image_path, n):
+        
+            set, i = n_to_set_and_n(n)
+            
+            file = image_path + Constants.file_name + "_" + str(set) + "_" + format_index(i)
+
+            file += Constants.fits_extension
+        
+            return fits.getdata(file, ext=0)
 
