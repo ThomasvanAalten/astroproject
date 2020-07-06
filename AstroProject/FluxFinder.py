@@ -628,7 +628,7 @@ class FluxFinder:
                 light_curve.write(out_file, format = Constants.table_format, overwrite=True)
 
         
-    def get_thumbnail(self, image_n, x, y, size):
+    def get_thumbnail(self, image_n, x, y, size, add_shift):
         
         n = image_n % self.set_size
         
@@ -636,8 +636,11 @@ class FluxFinder:
             n = self.set_size
             
         set = int((image_n-1) / self.set_size) + 1
-                
-        x_shift, y_shift = self.get_total_shift(n, set)
+        if add_shift:
+            x_shift, y_shift = self.get_total_shift(n, set)
+        else:
+            x_shift = 0
+            y_shift = 0
         
         self.has_sets = True
         image_file = self.get_image(n, set)
@@ -666,6 +669,7 @@ class FluxFinder:
         
         if ry > Constants.image_height:
             ry = Constants.image_height - 1
+            
             
         return image[ly:ry, lx:rx] # note your x,y coords need to be an int
 

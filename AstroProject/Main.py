@@ -24,13 +24,12 @@ print("Started at " + current_time)
 #Utilities.print_job("reducing images")
 
 c = Cataloguer.Cataloguer(Constants.folder, Constants.file_name, Constants.has_sets, Constants.set_size, Constants.n_sets)
-#c.catalogue()
+c.catalogue()
 
 #mof = MovingObjectFinder.MovingObjectFinder(Constants.folder)
 #mof.find_moving_objects()
 
-strf = StreakFinder.StreakFinder(Constants.folder, c)
-strf.find_all_streaks()
+
 #Utilities.print_job("cataloguing stars")
 
 #sf = ShiftFinder.ShiftFinder(Constants.folder, Constants.file_name, Constants.has_sets, Constants.set_size, Constants.n_sets)
@@ -42,6 +41,9 @@ strf.find_all_streaks()
 ff = FluxFinder.FluxFinder(Constants.folder, Constants.file_name, True, 7, 50)
 #ff.find_all_fluxes()
 #ff.make_light_curves()
+
+strf = StreakFinder.StreakFinder(Constants.folder, c, ff)
+strf.find_all_streaks()
 
 Utilities.print_job("making light curves")
 
