@@ -16,9 +16,11 @@ set, and the number of images in each set must be defined by changing
 the variables set_size and n_sets in the Constants.py file to their
 Desired values.
 
-Bias and flat field files must also be included. Currently the program 
-only uses a single one of each. These files should have the names
-'bias-001.fit' and 'flat-001.fit'.
+Bias and flat field files must also be included. These files should have
+names such as'bias-001.fit' and 'flat-001.fit'. The program will find
+create a master flatfield frame and bias frame by finding all of the
+flatfield/bias files in the directory and calculating the median pixel 
+value seen in each position.
 
 Once all of these requirements are satisfied, the Main.py file can then 
 be executed to run the program.
@@ -38,12 +40,12 @@ median. The flat field image is stored in the file 'flatfield-001.fit'.
 Cataloguing the Images
 ----------------------
 
-Using DAOStarFinder.find, with a FWHM of 8 pixels and a sigma level of 3 
+Using DAOStarFinder.find, with a FWHM of 8 pixels and a sigma level of 5 
 times the standard deviation of the counts in the image, a catalogue of all of 
 the sources in the FIRST image in the dataset is made. The catalogue stores 
 an ID for each star, its position on the image and its peak flux density per 
 pixel (amongst other less important things). The catalogue is saved in the 
-workspace directory as 'catalogue_name.txt', where name is the name of the 
+results directory as 'catalogue_name.txt', where name is the name of the 
 dataset. 
 
 The cataloguer also records the times at which image was taken in the 
@@ -56,8 +58,8 @@ Finding the Shifts
 The brightest object in the first image is found using the fluxes from the 
 catalogue (this should really be the brightest object in the centre of image -
 this will be implemented). This object is used as the reference star. Assuming 
-the shifts to be small between each image, the object should be within a 20*20 
-pixel square centred on the position of the same object within the previous 
+the shifts to be small between each image, the object should be within a 20 by 
+20 pixel square centred on the position of the same object within the previous 
 image. The centre of the new location of the object is found, and the pixel
 distance between the previous and current position is the shift between the 
 images. The reference object is the currently the sole object tracked through 
@@ -106,7 +108,7 @@ is created and stored in the workspace/results/ folder as 'SDvMean.png', with
 variable objects shown in red.
 
 The brightest objects in the image that are not classed as variable (currently all
-objects with counts >2*10^6 - should really be brightest 1% or so) are used to 
+objects with counts >2\*10^6 - should really be brightest 1% or so) are used to 
 create an average light curve. Looping through each of these objects, their 
 counts/mean_counts are added to the average light curve (on average, the count 
 contribution to the average curve for a single measurement is 1). Once the loop
