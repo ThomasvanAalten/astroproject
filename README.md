@@ -1,5 +1,3 @@
-# astroproject
-
 --------------------
 Running the Software
 --------------------
