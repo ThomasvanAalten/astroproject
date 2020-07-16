@@ -142,8 +142,26 @@ Finding Moving Objects
 The first image in the dataset is catalogued. The expected positions of each 
 source in the catalogue in a second image are found using the previously 
 calculated shifts. The second image is defined by the 
-moving_obj_check_image in the Constants file 
-Another catalogue is made of a small square slice of the second 
+moving_obj_check_image in the Constants file - this variable represents the 
+position of the image in the dataset. Another catalogue is made of a small square 
+slice of the second image around the expected position of each object. If no 
+object is found by the cataloguer at the centre of the slice, it may be a moving 
+object. A rudimentary check is then made to confirm this. This rudimentary check
+involves comparing the mean counts in a small and a large square slice around the 
+expected position. If the mean is much higher in the smaller slice, it is 
+reasonable to assume that there is an object there. The same check if made to 
+confirm that there is indeed an object in the first image at the catalogued 
+position. These checks are done as the cataloguer is not always accurate 
+in finding sources.
+
+If there is an object at the catalogued position in the first image and there is not
+an object at the expected position in the second image, the object is classed
+as a moving object. The x/y centroids and RA/Dec of the object in the first image
+are saved in the workspace/results/moving_objects folder, along with a 
+thumbnail. The thumbnail shows the object in the first image, and the expected
+position of the object in the second.
+
+
 
 
 
