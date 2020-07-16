@@ -161,7 +161,18 @@ are saved in the workspace/results/moving_objects folder, along with a
 thumbnail. The thumbnail shows the object in the first image, and the expected
 position of the object in the second.
 
+---------------
+Finding Streaks
+---------------
 
+Every fourth image in the dataset is scanned for streaks. Where a streak is found, the
+adjacent three images on either side are also scanned (the streak needs to be found 
+in multiple images to be used). 
 
+Each image being scanned needs to be prepared first. Image preparation involves two
+steps. The first step is reading in the preceding image, and dividing the image to
+be scanned by that first image divided by its mean. This mostly removed stars from 
+the image, while leaving the streaks. The second step involves removing any pixels
+with a count higher than the median of the image
 
 
