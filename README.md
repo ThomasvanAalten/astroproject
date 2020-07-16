@@ -135,5 +135,15 @@ in the first image along with  their variability is saved in
 standard deviation of that object is greater than the median standard deviation 
 of stars with a similar mean count. 
 
+----------------------
+Finding Moving Objects
+----------------------
+
+The first image in the dataset is catalogued. The expected positions of each 
+source in the catalogue in a second image are found using the previously 
+calculated shifts. The second image is defined by the 
+moving_obj_check_image in the Constants file 
+Another catalogue is made of a small square slice of the second 
+
 
 
