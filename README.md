@@ -173,6 +173,21 @@ Each image being scanned needs to be prepared first. Image preparation involves 
 steps. The first step is reading in the preceding image, and dividing the image to
 be scanned by that first image divided by its mean. This mostly removed stars from 
 the image, while leaving the streaks. The second step involves removing any pixels
-with a count higher than the median of the image
+with a count higher than the median of the image that have less than 3 neighbouring
+pixels with counts higher than the median. This reduces processing time later on, 
+although it is unclear whether this is necessary. 
+
+Each pixel in the image is then scanned. For each pixel with a count higher than 1.04 
+times the median, all of its neighbouring pixels with a count higher than 1.04 times 
+the mean are found. The same is done for all of these neighbouring pixels until there
+are no more such pixels to be scanned. All of these pixels must then form one extended 
+object. Care is taken not to scan the same pixel more than once. All objects which are 
+formed of less than 60 pixels are thrown away. 
+
+The x and y centre of the streak on the image is calculated by finding the mean position
+of the pixels in the object. This may not always return the exact centre as parts of 
+the streak may be brighter than others.
+
+
 
 
