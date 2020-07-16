@@ -165,10 +165,6 @@ position of the object in the second.
 Finding Streaks
 ---------------
 
-Every fourth image in the dataset is scanned for streaks. Where a streak is found, the
-adjacent three images on either side are also scanned (the streak needs to be found 
-in multiple images to be used). 
-
 Each image being scanned needs to be prepared first. Image preparation involves two
 steps. The first step is reading in the preceding image, and dividing the image to
 be scanned by that first image divided by its mean. This mostly removed stars from 
@@ -186,7 +182,24 @@ formed of less than 60 pixels are thrown away.
 
 The x and y centre of the streak on the image is calculated by finding the mean position
 of the pixels in the object. This may not always return the exact centre as parts of 
-the streak may be brighter than others.
+the streak may be brighter than others. A 6\*60 pixel rectangle is then defined around 
+the centre of the streak. The rectangle is then rotated around 180 degrees at increments
+of 1 degree. At each increment, the fraction of pixels in the rectangle that coincide 
+with pixels in the streak is found - this is the occupancy. If the occupancy of the 
+rectangle varies significantly with the angle, the object must be elongated, and
+hence is confirmed as a streak. The occupancy of the rectangle for stars will not
+change significantly with the angle. 
+
+Sometimes an individual streak will be broken up into separate disconnected parts. 
+Streaks with similar coordinates (less than 100 pixels apart at their closest point)
+are merged together to form one streak. A new x and y centre is then found for the
+resultant streak.
+
+Every fourth image in the dataset is scanned for streaks. Where a streak is found, the
+adjacent three images on either side are also scanned (the streak needs to be found 
+in multiple images to be used). 
+
+
 
 
 
