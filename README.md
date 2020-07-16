@@ -167,10 +167,10 @@ Finding Streaks
 
 Each image being scanned needs to be prepared first. Image preparation involves two
 steps. The first step is reading in the preceding image, and dividing the image to
-be scanned by that first image divided by its mean. This mostly removed stars from 
+be scanned by that first image divided by its mean. This mostly removes stars from 
 the image, while leaving the streaks. The second step involves removing any pixels
 with a count higher than the median of the image that have less than 3 neighbouring
-pixels with counts higher than the median. This reduces processing time later on, 
+pixels with a similarly high count. This reduces processing time later on, 
 although it is unclear whether this is necessary. 
 
 Each pixel in the image is then scanned. For each pixel with a count higher than 1.04 
