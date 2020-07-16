@@ -197,7 +197,10 @@ resultant streak.
 
 Every fourth image in the dataset is scanned for streaks. Where a streak is found, the
 adjacent three images on either side are also scanned (the streak needs to be found 
-in multiple images to be used). 
+in multiple images to be used). An image number in which the streak was observed, along with
+the time of observation, x and y centre, RA and Dec centre and angular velocity 
+(in terms of arcsec/s) at that time and a thumbnail are saved in the 
+workspace/results/streaks folder.
 
 
 
