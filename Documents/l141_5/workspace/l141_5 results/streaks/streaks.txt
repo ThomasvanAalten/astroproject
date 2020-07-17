@@ -1,0 +1,1 @@
+id image time xcentroid ycentroid ra dec RA/s Dec/s
